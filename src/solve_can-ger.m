@@ -5,8 +5,8 @@ A2 = A_ger_tot;
 B1 = output_can_tot;
 B2 = output_ger_tot;
 
+% normalize columns by total output
 for i = 1:length(B1)
-
     if (B1(i) ~= 0)
         A1(:, i) = A1(:, i) / B1(i);
     end
@@ -14,7 +14,6 @@ for i = 1:length(B1)
     if (B2(i) ~= 0)
         A2(:, i) = A2(:, i) / B2(i);
     end
-
 end
 
 A = [A1, A2];
@@ -23,11 +22,9 @@ B_vec = [B1, B2];
 l = [comp_can_tot, comp_ger_tot];
 
 for i = 1:length(l)
-
     if (l(i) ~= 0)
         l(i) = l(i) / B_vec(i);
     end
-
 end
 
 B = [eye(36, 36), eye(36, 36)];

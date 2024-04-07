@@ -17,13 +17,14 @@ switch_info(results_simul_wrapped)
 println("Replicate can1990/deu1990:")
 can1990_deu1990_replication = replicate_intensities(results_pairs, "can1990", "deu1990", x -> x in 0.62:0.01:0.7)
 # You can export to Markdown like this
-println(pretty_table(String, can1990_deu1990_replication, backend=Val(:markdown)))
+pretty_table(can1990_deu1990_replication, backend=Val(:markdown))
 # You can export to LaTeX like this
 can1990_deu1990_table = process_latex_table(can1990_deu1990_replication, :Country)
 println(can1990_deu1990_table)
 
 # Replication can1981/can1990: identical to Han
-replicate_trunc(results_pairs, "can1981", "can1990", 0.52)
+can1981_can1990_replication = replicate_trunc(results_pairs, "can1981", "can1990", 0.52)
+pretty_table(can1981_can1990_replication, backend=Val(:markdown))
 
 # Replication deu1978/deu1990: identical to Han
 replicate_intensities(results_pairs, "deu1978", "deu1990",

@@ -3,16 +3,17 @@
 Bear in mind that the columns of A describe the technology of one sector.
 Therefore all objects have permuted dimensions compared to the usual ``(1 + r)Ap + wl = p`` formula!!
 """
-function compute_envelope(; A, B, l, d, R, step, model_intensities, model_intensities_trunc, model_prices, verbose=false)
-    
+function compute_envelope(; A, B, l, d, R, step, model_intensities,
+        model_intensities_trunc, model_prices, verbose = false)
+
     # Number of goods
     n_goods = size(A, 1)
     # Number of countries
     n_countries = div(size(A, 2), n_goods)
     # Precision used to round to string
-    precision = Int(ceil(log10(1/step)))
+    precision = Int(ceil(log10(1 / step)))
     # Grid of profit rates
-    profit_rates = 0:step:round(R, digits=precision)
+    profit_rates = 0:step:round(R, digits = precision)
 
     # We use all 36 sectors but consider only 33 for effects. See Han/Schefold 2006 p. 751, footnote 2
     # Activity levels (q)
@@ -39,7 +40,8 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities, model_intens
 
     # FIXME: Das gehört hier nicht her
     # Set l
-    map((x, y) -> set_objective_coefficient(model_intensities, x, y), model_intensities[:x], l)
+    map((x, y) -> set_objective_coefficient(model_intensities, x, y),
+        model_intensities[:x], l)
     # This is necessary because of usa1982
     if !all(d .>= 0)
         d = ones(n_goods)
@@ -58,7 +60,7 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities, model_intens
         # von Neumann Ansatz
         C = (B - (1 + r) * A)
         # d .= ones(n_goods)
-    
+
         # See Han p. 169
         qq = ones(size(A, 2))
         if all(C * qq .- d .< 0.001)
@@ -71,18 +73,16 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities, model_intens
         error_msg = "$(termination_status(model_intensities))\nProbably unfeasible d!"
         @assert is_solved_and_feasible(model_intensities) error_msg
         intensities[:, i] = replace_with_zero.(value.(model_intensities[:x]))
-        chosen_technology[:, i] = [
-            highest_intensity_indices(sector)
-            for sector in 1:n_goods
-        ]
+        chosen_technology[:, i] = [highest_intensity_indices(sector)
+                                   for sector in 1:n_goods]
     end
 
     # We compute the truncated stuff and prices only at switch points
-    for (i, tech) in enumerate(eachcol(chosen_technology)[begin:end-1])
+    for (i, tech) in enumerate(eachcol(chosen_technology)[begin:(end - 1)])
         # Check whether we are at switch point
         switch = tech[1:33] != chosen_technology[1:33, i + 1]
         if switch
-            for j in i:(i+1)
+            for j in i:(i + 1)
                 # Compute truncated intensities
                 d = ones(n_goods)
                 A_trunc = view(A, :, chosen_technology[:, j]) # filter columns
@@ -111,11 +111,13 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities, model_intens
                 # Compute (pA)'
                 pA[:, j] = vec(A_trunc[1:33, 1:33]' * prices[:, i][1:33])
                 # Compute A * x / (l * x)
-                right_side_factor[:, j] = A_trunc[1:33, 1:33] * intensities_trunc[:, j][1:33] / lx[j]
+                right_side_factor[:, j] = A_trunc[1:33, 1:33] *
+                                          intensities_trunc[:, j][1:33] / lx[j]
             end
 
             # Compute p * A * x / (l * x)
-            push!(capital_intensities, [
+            push!(capital_intensities,
+                [
                     profit_rates[i] => prices[:, i][1:33]' * right_side_factor[:, i],
                     profit_rates[i + 1] => prices[:, i][1:33]' * right_side_factor[:, i + 1]
                 ]
@@ -125,28 +127,31 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities, model_intens
                     profit_rates[i + 1] => lx[i + 1]
                 ]
             )
-            push!(pA_at_switch, [
+            push!(pA_at_switch,
+                [
                     profit_rates[i] => pA[:, i][1:33],
                     profit_rates[i + 1] => pA[:, i + 1][1:33]
                 ]
             )
-            push!(intensities_at_switch, [
+            push!(intensities_at_switch,
+                [
                     profit_rates[i] => intensities_trunc[:, i][1:33],
                     profit_rates[i + 1] => intensities_trunc[:, i + 1][1:33]
                 ]
             )
             push!(prices_switch, profit_rates[i] => prices[:, i][1:33]
             )
-            push!(technologies_switch, [
-                    profit_rates[i] => chosen_technology[:, i][1:33]
-                    profit_rates[i + 1] => chosen_technology[:, i + 1][1:33]
-                ]
+            push!(technologies_switch,
+                [profit_rates[i] => chosen_technology[:, i][1:33]
+                 profit_rates[i + 1] => chosen_technology[:, i + 1][1:33]]
             )
         end
     end
 
-    profit_rates_to_names = Dict(profit_rates .=> string.(round.(profit_rates, digits=precision)))
-    df_intensities = DataFrame(intensities, map(r -> profit_rates_to_names[r], profit_rates))
+    profit_rates_to_names = Dict(profit_rates .=>
+        string.(round.(profit_rates, digits = precision)))
+    df_intensities = DataFrame(
+        intensities, map(r -> profit_rates_to_names[r], profit_rates))
     insertcols!(df_intensities, 1, "Sector" => repeat(sectors, n_countries))
 
     switches = Dict(

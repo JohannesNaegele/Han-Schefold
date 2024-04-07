@@ -47,11 +47,11 @@ replace_with_zero(x) = x == 1.0 ? 0.0 : x
 """ Setup and return a solver for our linear problem with intensities. """
 function create_intensities_r_solver(solver, l, A, B, d, lb)
     model = direct_model(solver)
-    @variable(model, x[i = eachindex(lb)] >= lb[i])
+    @variable(model, x[i = eachindex(lb)]>=lb[i])
     @variable(model, y[i = eachindex(lb)])
-    @objective(model, Min, l * x)
-    @constraint(model, con[i = eachindex(lb)], 1 * x[i] - y[i] == 0)
-    @constraint(model, d, B * x - A * y .>= d)
+    @objective(model, Min, l*x)
+    @constraint(model, con[i = eachindex(lb)], 1 * x[i] - y[i]==0)
+    @constraint(model, d, B * x - A * y.>=d)
     return model
 end
 
@@ -77,7 +77,7 @@ end
 function modify_A!(model, A, B, d)
     delete(model, model[:d])
     unregister(model, :d)
-    @constraint(model, d, B * model[:x] - A * model[:y] .>= d)
+    @constraint(model, d, B * model[:x] - A * model[:y].>=d)
 end
 
 """ Set the coefficient of variable[j] in the i-th constraint to C[i, j]. """

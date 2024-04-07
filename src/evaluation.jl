@@ -21,11 +21,12 @@ function n_reswitches(results_pairs)
             technology = [x[1].second for x in val2["switches"]["technology"]]
             push!(technology, val2["switches"]["technology"][end][2].second)
             # println(technology)
-            for (i, tech1) in enumerate(technology[begin:end-1])
-                for tech2 in technology[i + 1:end]
+            for (i, tech1) in enumerate(technology[begin:(end - 1)])
+                for tech2 in technology[(i + 1):end]
                     if tech1 == tech2
                         reswitches += 1
-                        println("Reswitching in: ", "$country1", "/", "$country2", ", r = $(val2["switches"]["technology"][i][1].first)")
+                        println("Reswitching in: ", "$country1", "/", "$country2",
+                            ", r = $(val2["switches"]["technology"][i][1].first)")
                         break
                     end
                 end
@@ -48,7 +49,8 @@ function switch_cases(results_pairs)
                 tech_index_switch = findfirst(tech[1].second .!= tech[2].second)
                 ci = val2["switches"]["capital_intensities"][i]
                 xii = val2["switches"]["pA"][i]
-                labour_up = xii[1].second[tech_index_switch] > xii[2].second[tech_index_switch]
+                labour_up = xii[1].second[tech_index_switch] >
+                            xii[2].second[tech_index_switch]
                 if ci[1].second >= ci[2].second
                     if labour_up
                         κ_down_labour_up += 1
@@ -105,7 +107,8 @@ function replicate_trunc(results_pairs, country1, country2, r)
 
     # Filtering columns based on profit rates
     filter_cond = x -> x == r
-    filtered_col = findfirst(filter_cond ∘ (x -> x[1].first), country_results["switches"]["capital_intensities"])
+    filtered_col = findfirst(
+        filter_cond ∘ (x -> x[1].first), country_results["switches"]["capital_intensities"])
 
     # Constructing the replication data
     cap = country_results["switches"]["capital_intensities"][filtered_col]
@@ -133,7 +136,7 @@ function replicate_trunc(results_pairs, country1, country2, r)
             "lq, r=" * r₂,
             "p, r=" * r₁,
             "q, r=" * r₁,
-            "q, r=" * r₂,
+            "q, r=" * r₂
         )
     )
     println(replication_data)
@@ -150,7 +153,7 @@ function switch_info(results)
 
     # Replication intensity cases
     found_cases = switch_cases(results)
-    cases_perc = round.(found_cases./num_switches .* 100, digits=2)
+    cases_perc = round.(found_cases ./ num_switches .* 100, digits = 2)
     println("Capital intensity-reducing, labour-increasing: $(found_cases[1]) cases ($(cases_perc[1])%)")
     println("Capital intensity-reducing, labour-reducing: $(found_cases[2]) cases ($(cases_perc[2])%)")
     println("Capital intensity-increasing, labour-increasing: $(found_cases[3]) cases ($(cases_perc[3])%)")

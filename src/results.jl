@@ -6,7 +6,7 @@ using StatsBase
 include("evaluation.jl")
 include("export.jl")
 results_pairs, results_pairs_fine, results_simul = load.(
-    "results_fine.jld2", ["results_pairs", "results_pairs_fine", "results_simul"]
+    "results.jld2", ["results_pairs", "results_pairs_fine", "results_simul"]
 );
 results_simul_wrapped = Dict("foo" => Dict("bar" => results_simul))
 

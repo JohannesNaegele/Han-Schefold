@@ -44,7 +44,7 @@ end
 
 replace_with_zero(x) = x == 1.0 ? 0.0 : x
 
-""" Setup and return a solver for our linear problem with intensities. """
+""" Setup and return a solver for our linear problem with intensities that can modify the profit rate. """
 function create_intensities_r_solver(solver, l, A, B, d, lb)
     model = direct_model(solver)
     @variable(model, x[i = eachindex(lb)]>=lb[i])
@@ -82,12 +82,12 @@ end
 
 """ Set the coefficient of variable[j] in the i-th constraint to C[i, j]. """
 function modify_C!(model, variable, C)
-    for j in axes(C, 2)  # Loop over the columns of C (each variable)
+    for j in axes(C, 2) # Loop over the columns of C (each variable)
         set_normalized_coefficient.(model[:con], variable[j], vec(C[:, j]))
     end
 end
 
-""" ??? """
+""" Set a new profit rate r. """
 function modify_r!(model, r)
     set_normalized_coefficient(model[:con], model[:x], fill(1 + r, length(model[:x])))
 end

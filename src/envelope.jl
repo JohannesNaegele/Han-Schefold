@@ -4,7 +4,7 @@ Bear in mind that the columns of A describe the technology of one sector.
 Therefore all objects have permuted dimensions compared to the usual ``(1 + r)Ap + wl = p`` formula!!
 """
 function compute_envelope(; A, B, l, d, R, step, model_intensities,
-        model_intensities_trunc, model_prices, verbose = false)
+        model_intensities_trunc, model_prices, verbose = false, save_all=true)
 
     # Number of goods
     n_goods = size(A, 1)
@@ -37,6 +37,7 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
     prices_switch = Pair{Float64, Vector{Float64}}[]
     technologies_switch = Vector{Pair{Float64, Vector{Int64}}}[]
     pA_at_switch = Vector{Pair{Float64, Vector{Float64}}}[]
+    chi_at_switch = Vector{Pair{Float64, Vector{Float64}}}[]
 
     # FIXME: Das gehört hier nicht her
     # Set l
@@ -59,7 +60,6 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
 
         # von Neumann Ansatz
         C = (B - (1 + r) * A)
-        # d .= ones(n_goods)
 
         # See Han p. 169
         qq = ones(size(A, 2))
@@ -133,6 +133,12 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
                     profit_rates[i + 1] => pA[:, i + 1][1:33]
                 ]
             )
+            push!(chi_at_switch,
+                [
+                    profit_rates[i] => pA[:, i][1:33] ./ vec(view(l, :, chosen_technology[:, i]))[1:33],
+                    profit_rates[i + 1] => pA[:, i + 1][1:33] ./ vec(view(l, :, chosen_technology[:, i + 1]))[1:33]
+                ]
+            )
             push!(intensities_at_switch,
                 [
                     profit_rates[i] => intensities_trunc[:, i][1:33],
@@ -154,14 +160,25 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
         intensities, map(r -> profit_rates_to_names[r], profit_rates))
     insertcols!(df_intensities, 1, "Sector" => repeat(sectors, n_countries))
 
-    switches = Dict(
-        "capital_intensities" => capital_intensities,
-        "pA" => pA_at_switch,
-        "lx" => lx_at_switch,
-        "prices" => prices_switch,
-        "intensities" => intensities_at_switch,
-        "technology" => technologies_switch
-    )
+    if save_all
+        switches = Dict(
+            "capital_intensities" => capital_intensities,
+            "pA" => pA_at_switch,
+            "lx" => lx_at_switch,
+            "chi" => chi_at_switch,
+            "prices" => prices_switch,
+            "intensities" => intensities_at_switch,
+            "technology" => technologies_switch
+        )
+    else
+        switches = Dict(
+            "capital_intensities" => capital_intensities,
+            "chi" => chi_at_switch,
+            "prices" => prices_switch,
+            "intensities" => intensities_at_switch,
+            "technology" => technologies_switch
+        )
+    end
 
     return df_intensities, profit_rates_to_names, profit_rates, switches
 end

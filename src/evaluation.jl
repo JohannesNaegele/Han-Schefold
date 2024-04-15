@@ -46,11 +46,11 @@ function switch_cases(results_pairs)
                 tech = val2["switches"]["technology"][i]
                 sanity_check = sum(tech[1].second .!= tech[2].second)
                 (sanity_check != 1) ? sum_of_multiple_switches += 1 : nothing
-                tech_index_switch = findfirst(tech[1].second .!= tech[2].second)
+                tech_index_switches = findall(tech[1].second .!= tech[2].second)
                 ci = val2["switches"]["capital_intensities"][i]
-                xii = val2["switches"]["pA"][i]
-                labour_up = xii[1].second[tech_index_switch] >
-                            xii[2].second[tech_index_switch]
+                chii = val2["switches"]["chi"][i]
+                labour_up = any(map(i -> chii[1].second[i] >
+                            chii[2].second[i], tech_index_switches))
                 if ci[1].second >= ci[2].second
                     if labour_up
                         κ_down_labour_up += 1

@@ -1,5 +1,5 @@
 """ Compute the envelope for all countries at once. """
-function simultaneous_comparisons(ids; step = 0.01, verbose = true)
+function simultaneous_comparisons(ids; step = 0.01, verbose = false)
 
     # Read in data
     data = preprocess_data.(ids)

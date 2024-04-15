@@ -1,3 +1,8 @@
 *.DS_Store
 Manifest.toml
 results.jld2
+*.fls
+*.aux
+*.log
+*.fdb_latexmk
+src/latex/tabular_template.pdf

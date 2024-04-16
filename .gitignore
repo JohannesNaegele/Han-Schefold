@@ -6,3 +6,4 @@ results.jld2
 *.log
 *.fdb_latexmk
 src/latex/tabular_template.pdf
+*.synctex.gz

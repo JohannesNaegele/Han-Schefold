@@ -8,6 +8,8 @@ The calculations can be executed via `run.jl` and the results can be evaluated v
 
 ## Results
 
+For *reverse substitution of labour* we consider the change in $l_i$; the explanation with $\chi$ in the paper is unclear to me.
+
 ### Overall information
 
 ```

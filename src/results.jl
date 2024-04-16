@@ -14,6 +14,7 @@ results_simul_wrapped = Dict("foo" => Dict("bar" => results_simul))
 switch_info(results_pairs)
 switch_info(results_pairs_fine)
 switch_info(results_simul_wrapped)
+format_simultaneous_results(results_simul)
 
 # Replication can1990/deu1990: identical to Han and Han/Schefold
 println("Replicate can1990/deu1990:")

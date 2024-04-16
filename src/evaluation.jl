@@ -48,8 +48,8 @@ function switch_cases(results_pairs)
                 (sanity_check != 1) ? sum_of_multiple_switches += 1 : nothing
                 tech_index_switches = findall(tech[1].second .!= tech[2].second)
                 ci = val2["switches"]["capital_intensities"][i]
-                chii = val2["switches"]["chi"][i]
-                labour_up = any(map(i -> chii[1].second[i] >
+                chii = val2["switches"]["l"][i]
+                labour_up = any(map(i -> chii[1].second[i] <
                             chii[2].second[i], tech_index_switches))
                 if ci[1].second >= ci[2].second
                     if labour_up

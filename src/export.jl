@@ -30,8 +30,22 @@ function process_latex_table(df, country_column)
 
     # Reconstruct the processed table
     join(lines, '\n')
+
+    # hl_v = LatexHighlighter((data, i, j) -> (j == 3) && data[i, 3] > 9, ["color{blue}","textbf"]);
 end
 
-# hl_v = LatexHighlighter((data, i, j) -> (j == 3) && data[i, 3] > 9, ["color{blue}","textbf"]);
-# pretty_table(can1990_deu1990_replication, backend = Val(:latex))
-# Generate LaTeX table and format nicely
+function format_simultaneous_results(results_simul)
+    switches = [i[1].first for i in results_simul["switches"]["technology"]]
+    switches = vcat(switches, results_simul["profit_rates"][end])
+    switches = map(
+        r -> results_simul["names"][r],
+        filter(x -> x in switches, results_simul["profit_rates"])
+    )
+    tech = results_simul["labeled_technology"]
+    
+    hl_switch = LatexHighlighter(
+        (data, i, j) -> (j < size(tech, 2) && (data[i, j] != data[i, j + 1])) || (j == size(tech, 2) && (data[i, j] != data[i, j - 1])) || (j > 1 && (data[i, j] != data[i, j - 1])),
+        ["color{red}","textbf"]
+    );
+    return pretty_table(tech, header=switches, backend = Val(:latex), highlighters = hl_switch)
+end

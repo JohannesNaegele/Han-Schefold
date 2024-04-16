@@ -37,7 +37,7 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
     prices_switch = Pair{Float64, Vector{Float64}}[]
     technologies_switch = Vector{Pair{Float64, Vector{Int64}}}[]
     pA_at_switch = Vector{Pair{Float64, Vector{Float64}}}[]
-    chi_at_switch = Vector{Pair{Float64, Vector{Float64}}}[]
+    l_at_switch = Vector{Pair{Float64, Vector{Float64}}}[]
 
     # FIXME: Das gehört hier nicht her
     # Set l
@@ -133,10 +133,10 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
                     profit_rates[i + 1] => pA[:, i + 1][1:33]
                 ]
             )
-            push!(chi_at_switch,
+            push!(l_at_switch,
                 [
-                    profit_rates[i] => pA[:, i][1:33] ./ vec(view(l, :, chosen_technology[:, i]))[1:33],
-                    profit_rates[i + 1] => pA[:, i + 1][1:33] ./ vec(view(l, :, chosen_technology[:, i + 1]))[1:33]
+                    profit_rates[i] => vec(view(l, :, chosen_technology[:, i]))[1:33],
+                    profit_rates[i + 1] => vec(view(l, :, chosen_technology[:, i + 1]))[1:33]
                 ]
             )
             push!(intensities_at_switch,
@@ -165,7 +165,7 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
             "capital_intensities" => capital_intensities,
             "pA" => pA_at_switch,
             "lx" => lx_at_switch,
-            "chi" => chi_at_switch,
+            "l" => l_at_switch,
             "prices" => prices_switch,
             "intensities" => intensities_at_switch,
             "technology" => technologies_switch
@@ -173,7 +173,7 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
     else
         switches = Dict(
             "capital_intensities" => capital_intensities,
-            "chi" => chi_at_switch,
+            "l" => l_at_switch,
             "prices" => prices_switch,
             "intensities" => intensities_at_switch,
             "technology" => technologies_switch

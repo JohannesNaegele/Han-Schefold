@@ -8,8 +8,6 @@ function simultaneous_comparisons(ids; step = 0.01, verbose = false)
     l = vec(reduce(hcat, lᵢ for (Aᵢ, lᵢ, dᵢ) in data))'
     d = vec(sum(lᵢ for (Aᵢ, lᵢ, dᵢ) in data) / length(ids))
     B = reduce(hcat, I(n_goods) for _ in eachindex(ids))
-    println(all(0 .<= A .< Inf))
-    println(all(0 .<= l .< Inf))
 
     # Preallocate solver variables
     lb = zeros(n_goods * length(ids))

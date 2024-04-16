@@ -11,7 +11,9 @@ function pairwise_comparisons(ids; step = 0.01, save_all = true, n_goods = 36)
          for (i, id1) in enumerate(ids)]
     )
     solver = optimizer_with_attributes(HiGHS.Optimizer, "log_to_console" => false)
-    Threads.@threads for i in eachindex(ids)
+
+    iteration = Threads.Atomic{Int}(0);
+    Threads.@threads :dynamic for i in eachindex(ids)
         # Preallocate solver variables
         l = zeros(2 * n_goods)'
         A = zeros(n_goods, 2 * n_goods)
@@ -34,13 +36,15 @@ function pairwise_comparisons(ids; step = 0.01, save_all = true, n_goods = 36)
         A1, l1, d1 = preprocess_data(country1)
         n_goods = size(A1, 1)
         for country2 in view(ids, (i + 1):length(ids))
+
+            Threads.atomic_add!(iteration, 1)
+            println(country1, country2, ", iteration: $(iteration[])")
+
             A2, l2, d2 = preprocess_data(country2)
             d .= vec((d1 + d2) / 2)
             A = [A1 A2]
             l .= [l1 l2]
             R = compute_R(maximum.(real_eigvals.([A1, A2])))
-
-            println(country1, country2)
             modify_A!(model_x, A, B, d)
             df_q, profit_rates_to_names, profit_rates, switches = compute_envelope(
                 A = A,

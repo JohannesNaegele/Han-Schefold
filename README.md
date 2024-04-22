@@ -8,7 +8,11 @@ The calculations can be executed via `run.jl` and the results can be evaluated v
 
 ## Results
 
-For *reverse substitution of labour* we consider the change in $l_i$; the explanation with $\chi$ in the paper is unclear to me.
+For *reverse substitution of labour* we consider the change in $l_i$; the explanation with $\chi$ in the paper is unclear to me. With this approach, we obtain comparable results. 
+However there are some noteworthy topics:
+- There are countries where entries for the normalization factor *Total final demand* are missing. It is not clear how to handle these cases.
+- A finer grid gives fully piecewise switches and qualitatively comparable results.
+- A simultaneous comparison for all countries at once eliminates all perverse effects.
 
 ### Overall information
 
@@ -18,10 +22,35 @@ Number of switches: 4913
 Reswitching in: can1990/deu1990, r = 0.64
 Number of reswitches: 1
 There have been 367 instances of switches that are not piecemeal.
-Capital intensity-reducing, labour-increasing: 4704 cases (95.75%)
-Capital intensity-reducing, labour-reducing: 174 cases (3.54%)
+Capital intensity-reducing, labour-increasing: 4777 cases (97.23%)
+Capital intensity-reducing, labour-reducing: 101 cases (2.06%)
+Capital intensity-increasing, labour-increasing: 9 cases (0.18%)
+Capital intensity-increasing, labour-reducing: 26 cases (0.53%)
+```
+
+### Overall information with finer grid
+```
+There are 496 pairwise comparisons.
+Number of switches: 5312
+Reswitching in: can1990/deu1990, r = 0.64729
+Number of reswitches: 1
+There have been 0 instances of switches that are not piecemeal.
+Capital intensity-reducing, labour-increasing: 5158 cases (97.1%)
+Capital intensity-reducing, labour-reducing: 111 cases (2.09%)
+Capital intensity-increasing, labour-increasing: 11 cases (0.21%)
+Capital intensity-increasing, labour-reducing: 32 cases (0.6%)
+```
+
+### Overall information for simultaneous comparisons
+```
+There are 1 pairwise comparisons.
+Number of switches: 8
+Number of reswitches: 0
+There have been 0 instances of switches that are not piecemeal.
+Capital intensity-reducing, labour-increasing: 8 cases (100.0%)
+Capital intensity-reducing, labour-reducing: 0 cases (0.0%)
 Capital intensity-increasing, labour-increasing: 0 cases (0.0%)
-Capital intensity-increasing, labour-reducing: 35 cases (0.71%)
+Capital intensity-increasing, labour-reducing: 0 cases (0.0%)
 ```
 
 ### can1990 vs. deu1990

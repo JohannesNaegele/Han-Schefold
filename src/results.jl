@@ -11,6 +11,7 @@ results_pairs, results_pairs_fine, results_simul = load.(
 results_simul_wrapped = Dict("foo" => Dict("bar" => results_simul))
 
 # TODO: mark/filter results for reverse capital deepening
+# TODO: plot wage curves for simultaneous comparison
 switch_info(results_pairs)
 switch_info(results_pairs_fine)
 switch_info(results_simul_wrapped)

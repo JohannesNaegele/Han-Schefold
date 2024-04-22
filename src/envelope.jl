@@ -1,4 +1,4 @@
-""" Compute the envelope for the book-of-blueprints A.
+""" Compute the envelope for the book-of-blueprints A with linear programming.
 
 Bear in mind that the columns of A describe the technology of one sector.
 Therefore all objects have permuted dimensions compared to the usual ``(1 + r)Ap + wl = p`` formula!!

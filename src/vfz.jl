@@ -7,24 +7,26 @@ struct Envelope{T, R}
     B
     l
     d
-    piecewise_iterator
+    n_goods::Int64
+    n_countries::Int64
     ids::Dict{Int64, Vector{T}} # map technologies to ids
     tech_dict::Dict{R, Int64} # map profit rates to ids
     reverse::Dict{Int64, Set{R}} # map ids to profit rates
     wages::Dict{R, Float64} # map to wages
-    precision::Int64
-    Envelope(; A, B, l, d, iterator, profit_rates, initial_tech, precision=6) = new{Int64, eltype(profit_rates)}(
+    stepsize::Float64
+    Envelope(; A, B, l, d, profit_rates, initial_tech, stepsize=0.0001) = new{Int64, eltype(profit_rates)}(
         A,
         B,
         l,
         d,
-        piecewise_iterator,
+        size(A, 1),
+        div(size(A, 2), n_goods),
         product(1:n_countries, 1:n_goods)
         Dict(1 => initial_tech),
         Dict(profit_rates .=> 1),
         Dict(1 => Set(profit_rates))
         Dict(profit_rates .=> -Inf)
-        precision
+        stepsize
     )
 end
 
@@ -49,55 +51,84 @@ function update_envelope(envelope, r, technology, w)
     envelope.wages[r] = w
 end
 
-function try_piecewise_switches(envelope, r, l, d, C_inv)
+function try_piecewise_switches(envelope, r, d, C_inv)
     w_old = envelope.wages[r]
     w_max = w_old
     old_tech_id = envelope.tech_dict[r]
-    l = envelope.l[envelope.ids[old_tech_id]]
-    for (country_tech, sector_tech) in piecewise_iterator
-        process_old = view(envelope.A, :, envelope.ids[old_tech_id][sector_tech])
-        new_col = (country_tech - 1) * n_goods + sector_tech
-        process_new = view(envelope.A, :, new_col)
-        l[sector_tech] = ...
-        w = compute_w(C_inv=C_inv, d=d, l=l, process_old=process_old, process=process_new, sector_tech, r)
-        w > w_max && w_max = w
+    old_l = envelope.l[envelope.ids[old_tech_id]]
+    l = copy(old_l)
+    for sector_tech in 1:envelope.n_goods
+        for country_tech in 1:envelope.n_countries
+            process_old = view(envelope.A, :, envelope.ids[old_tech_id][sector_tech])
+            new_col = (country_tech - 1) * n_goods + sector_tech
+            process_new = view(envelope.A, :, new_col)
+            l[sector_tech] = envelope.l[new_col]
+            w = compute_w(C_inv=C_inv, d=envelope.d, l=l, process_old=process_old, process=process_new, sector_tech, r)
+            w > w_max && w_max = w
+        end
+        l[sector_tech] = old_l[sector_tech] # reset
     end
     # Update the envelope
     update_envelope(envelope, r, new_tech, w_max)
-    return w_max == w_old
+    return w_max != w_old
 end
 
-function binary_search(envelope, C_inv, start_r, end_r)
+function try_start_tech(envelope, C_inv, start_r, end_r)
+    tech = envelope.ids[envelope.tech_dict[start_r]]
+    w_old = envelope.wages[end_r]
+    process_old = view(envelope.A, :, envelope.ids[old_tech_id][sector_tech])
+    new_col = (country_tech - 1) * n_goods + sector_tech
+    process_new = view(envelope.A, :, new_col)
+    l[sector_tech] = envelope.l[new_col]
+    w = compute_w(C_inv=C_inv, d=envelope.d, l=l, process_old=process_old, process=process_new, sector_tech, end_r - start_r)
+    update_envelope(envelope, r, new_tech, w_max)
+    return w_max != w_old, C_inv
+end
+
+function binary_search(envelope, C_inv, start_r, end_r, start_terminated=false)
     if end_r - start_r < precision_r_diff
         # TODO:
         # check for numerical instability
     else
-        # if tech transfer works: try behaviour in higher profit rates
-        # als try behaviour in lower profit rates
-        if try_start_tech(envelope, end_r)
-            # update C_inv
-            # compute_R(maximum.(real_eigvals.([A1, A2])))
-            binary_search(envelope, C_inv, r + 1/envelope.precision, end_r)
-        # if it doesn't work: split in lower and upper half of the profit rates
-        else
-            r = ceil((start_r + end_r) / 2, digits=envelope.precision)
-            terminated = try_piecewise_switches(envelope, end_r, l, d, C_inv) # modify tech at end_r
-            if terminated
-                for interval_r in next_r:1/envelope.precision:corner_r
-                    also_terminated = try_piecewise_switches(envelope, interval_r, l, d, C_inv)
+        # First, we try to improve the current tech at start_r (if not already optimal)
+        # If tech transfer works:
+        #   If piecewise improvement in end_r is possible: Reverse roles.
+        #   If not: Check all values between start_r and end_r (if necessary search in smaller interval again)
+        # If it doesn't work: split in lower and upper half of the profit rates and try again
+        start_terminated = start_terminated || try_piecewise_switches(envelope, start_r, d, C_inv)
+        transfer_worked, C_inv = try_start_tech(envelope, C_inv, start_r, end_r)
+        if transfer_worked
+            end_terminated = try_piecewise_switches(envelope, end_r, d, C_inv)
+            all_terminated = end_terminated
+            # If we are done at this profit rate: Check transfer to next profit rates and if they are done as well
+            if end_terminated
+                next_r = r_end + envelope.stepsize
+                for interval_r in next_r:envelope.stepsize:r_start
+                    transfer_worked, C_inv = try_start_tech(envelope, C_inv, start_r, end_r)
+                    also_terminated = try_piecewise_switches(envelope, interval_r, d, C_inv)
+                    # If we are not done: search in this smaller interval again
                     if !also_terminated
-                        # start_r = ...
-                        # end_r = ...
-                        # r = ...
+                        start_r = end_r
+                        end_r = interval_r
+                        all_terminated = false
                         break
                     end
-                end
+                end                
             end
-            # if this is not working, mark as ready
-            binary_search(envelope, C_inv, start_r, r)
-            binary_search(envelope, C_inv, end_r, r + 1/envelope.precision)
+            all_terminated && return
+            # Maybe here extend if end_r is highest, but this is tricky
+            binary_search(envelope, C_inv, end_r, start_r)
+        else
+            # Maybe rationals/fixed point arithmetic would be better
+            # Split the interval in half
+            grid = start_r:envelope.precision:end_r
+            r = grid[div(length(grid), 2)]
+
+            # Try the lower half (without new pairwise search in start_r if we are already optimal)
+            binary_search(envelope, C_inv, start_r, r, start_terminated)
+            # Try the upper half
+            binary_search(envelope, C_inv, end_r, r + envelope.stepsize)
         end
-        # after we finished, take the deepest level at r_* and start again from right to left with 0, r_*
     end
 end
 
@@ -128,8 +159,6 @@ Therefore all objects have permuted dimensions compared to the usual ``(1 + r)Ap
 function compute_vfz(; A, B, l, d, R, step, verbose = false, save_all=true)
     # Number of goods
     n_goods = size(A, 1)
-    # Number of countries
-    n_countries = div(size(A, 2), n_goods)
     profit_rates = 0.0:step:R
     init_tech = A[:, 1:n_goods]
 
@@ -138,7 +167,6 @@ function compute_vfz(; A, B, l, d, R, step, verbose = false, save_all=true)
         B=B,
         l=l,
         d=d,
-        iterator=product(1:n_countries, 1:n_goods),
         profit_rates=profit_rates,
         initial_tech=init_tech
     )
@@ -146,7 +174,11 @@ function compute_vfz(; A, B, l, d, R, step, verbose = false, save_all=true)
     start_C_inv = inv(B - A)
 
     binary_search(envelope, start_C_inv, 0.0, R)
-    # get_highest_r(envelope, l, d, R)
-    # test whether the Woodbury formula is stable; do this only at begin/start of tech choice
+    # Extend the maximal profit rate
+    # compute_R(maximum.(real_eigvals.([A1, A2])))
+    # Test whether the Woodbury formula is stable; do this only at begin/start of tech choice
     test_at_corners(envelope, l, d, R)
+    n_techs = unique(values(envelope.tech_dict))
+    println("We have $(n_techs - 1) switches.")
+    return envelope
 end

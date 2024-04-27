@@ -28,13 +28,9 @@ struct Envelope{T, R}
     )
 end
 
-# initial
-initial_technology = collect(1:33)
-profit_rates = 0:0.1:1
-envelope = Envelope(profit_rates, initial_technology)
-
 # Update the envelope with a new technology
 function update_envelope(envelope, r, technology, w)
+    # set the new technology
     old_id = envelope.tech_dict[r]
     new_id = findfirst(==(technology), envelope.ids)
     @assert old_id != new_id "You have to update with a different technology."
@@ -49,38 +45,68 @@ function update_envelope(envelope, r, technology, w)
     # Remove the profit rate from the reverse dict
     println(old_id, new_id)
     pop!(envelope.reverse[old_id], r)
+    # set the new maximal wage
+    envelope.wages[r] = w
 end
 
-function try_piecewise_switches(envelope, r, l, d, w)
+function try_piecewise_switches(envelope, r, l, d, C_inv)
+    w_old = envelope.wages[r]
+    w_max = w_old
+    old_tech_id = envelope.tech_dict[r]
+    l = envelope.l[envelope.ids[old_tech_id]]
     for (country_tech, sector_tech) in piecewise_iterator
-        w = compute_w(A, B, d, l, r)
-        if w > envelope.wages[r]
-            # set the new wage
-            # set the new technology
-            found_all = false
-            break
-        end
+        process_old = view(envelope.A, :, envelope.ids[old_tech_id][sector_tech])
+        new_col = (country_tech - 1) * n_goods + sector_tech
+        process_new = view(envelope.A, :, new_col)
+        l[sector_tech] = ...
+        w = compute_w(C_inv=C_inv, d=d, l=l, process_old=process_old, process=process_new, sector_tech, r)
+        w > w_max && w_max = w
     end
+    # Update the envelope
+    update_envelope(envelope, r, new_tech, w_max)
+    return w_max == w_old
 end
 
-function binary_search(envelope, start_r, end_r)
-    # if tech transfer works: try behaviour in higher profit rates
-    # als try behaviour in lower profit rates
-    if try_start_tech(envelope, end_r)
-        # compute_R(maximum.(real_eigvals.([A1, A2])))
-        binary_search(envelope, r + 1/envelope.precision, end_r)
-    # if it doesn't work: split in lower and upper half of the profit rates
+function binary_search(envelope, C_inv, start_r, end_r)
+    if end_r - start_r < precision_r_diff
+        # TODO:
+        # check for numerical instability
     else
-        r = ceil((start_r + end_r) / 2, digits=envelope.precision)
-        try_piecewise_switches(envelope, end_r, l, d, w) # modify tech at end_r
-        # if this is not working, mark as ready
-        binary_search(envelope, start_r, r)
-        binary_search(envelope, end_r, r + 1/envelope.precision)
+        # if tech transfer works: try behaviour in higher profit rates
+        # als try behaviour in lower profit rates
+        if try_start_tech(envelope, end_r)
+            # update C_inv
+            # compute_R(maximum.(real_eigvals.([A1, A2])))
+            binary_search(envelope, C_inv, r + 1/envelope.precision, end_r)
+        # if it doesn't work: split in lower and upper half of the profit rates
+        else
+            r = ceil((start_r + end_r) / 2, digits=envelope.precision)
+            terminated = try_piecewise_switches(envelope, end_r, l, d, C_inv) # modify tech at end_r
+            if terminated
+                for interval_r in next_r:1/envelope.precision:corner_r
+                    also_terminated = try_piecewise_switches(envelope, interval_r, l, d, C_inv)
+                    if !also_terminated
+                        # start_r = ...
+                        # end_r = ...
+                        # r = ...
+                        break
+                    end
+                end
+            end
+            # if this is not working, mark as ready
+            binary_search(envelope, C_inv, start_r, r)
+            binary_search(envelope, C_inv, end_r, r + 1/envelope.precision)
+        end
+        # after we finished, take the deepest level at r_* and start again from right to left with 0, r_*
     end
 end
-# after we finished, take the deepest level at r_* and start again from right to left with 0, r_*
 
-update_envelope(envelope, 0.0, [1, 2], 1.0)
+function test_at_corners(envelope, l, d, R)
+    # test at the lowest profit rate
+    # try_piecewise_switches(envelope, 0.0, l, d, ...)
+    # test at the highest profit rate
+    # try_piecewise_switches(envelope, R, l, d, ...)
+end
 
 """ Compute the envelope for the book-of-blueprints A with the VFZ algorithm.
 
@@ -117,7 +143,9 @@ function compute_vfz(; A, B, l, d, R, step, verbose = false, save_all=true)
         initial_tech=init_tech
     )
 
-    binary_search(envelope, 0.0, R)
+    start_C_inv = inv(B - A)
+
+    binary_search(envelope, start_C_inv, 0.0, R)
     # get_highest_r(envelope, l, d, R)
     # test whether the Woodbury formula is stable; do this only at begin/start of tech choice
     test_at_corners(envelope, l, d, R)

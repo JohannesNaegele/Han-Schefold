@@ -58,6 +58,8 @@ function pairwise_comparisons(ids; step = 0.01, save_all = true, n_goods = 36)
                 model_prices = model_p,
                 save_all = save_all
             )
+            n_countries = div(size(A, 2), n_goods)
+            insertcols!(df_q, 1, "Sector" => repeat(sectors, n_countries))
             insertcols!(df_q,
                 1,
                 "Country" => reduce(

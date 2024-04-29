@@ -1,4 +1,5 @@
-using LinearAlgebra
+
+using Sraffa
 using ExcelReaders
 using DataFrames
 using JuMP
@@ -7,7 +8,6 @@ using JLD2
 
 include("preprocess.jl")
 include("helpers.jl")
-include("envelope.jl")
 include("pairwise.jl")
 include("simultaneous.jl")
 

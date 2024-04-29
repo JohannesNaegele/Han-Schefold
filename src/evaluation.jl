@@ -159,3 +159,63 @@ function switch_info(results)
     println("Capital intensity-increasing, labour-increasing: $(found_cases[3]) cases ($(cases_perc[3])%)")
     println("Capital intensity-increasing, labour-reducing: $(found_cases[4]) cases ($(cases_perc[4])%)")
 end
+
+function plot_wage_curves(results)
+    techs = results["switches"]["technology"]
+    n_techs = length(techs[end][2].second)
+    A = results["A"]
+    B = results["B"]
+    l = vec(results["l"])
+    n_countries = div(size(A, 2), size(A, 1))
+    d = results["d"][1:n_techs]
+    max_R = compute_R(maximum(real_eigvals(A[1:n_techs, techs[end][2].second]')))
+    grid_R = 0:0.01:max_R
+
+    println(A[1:n_techs, techs[1][1].second])
+    println(real_eigvals(A[1:n_techs, techs[end][2].second]'))
+    println(real_eigvals(A[1:n_techs, techs[end][2].second]))
+    println(real_eigvals(A[1:n_techs, techs[1][1].second]'))
+    println(real_eigvals(A[1:n_techs, techs[1][1].second]))
+    curves_countries = zeros(length(grid_R), n_countries)
+    for j in 1:n_countries
+        tech = (1:n_techs) .+ (j - 1) * size(A, 1)
+        A_curve = A[1:n_techs, tech]
+        B_curve = B[1:n_techs, tech]
+        l_curve = l[tech]
+        for (i, r) in enumerate(grid_R)
+            curves_countries[i, j] = compute_w(A_curve, B_curve, d, l_curve, r)
+        end
+    end
+    curves_env = zeros(length(grid_R), length(techs) + 1)
+    r_env = zeros(size(curves_env, 2))
+
+    println(techs[1][1].second)
+    A_curve = A[1:n_techs, techs[1][1].second]
+    B_curve = B[1:n_techs, techs[1][1].second]
+    l_curve = l[techs[1][1].second]
+    r_env[1] = compute_R(maximum(real_eigvals(A_curve)))
+    for (i, r) in enumerate(grid_R)
+        w = compute_w(A_curve, B_curve, d, l_curve, r)
+        curves_env[i, 1] = r <= r_env[1] ? w : 0.0
+    end
+    for (j, tech) in enumerate(techs)
+        A_curve = A[1:n_techs, tech[2].second]
+        B_curve = B[1:n_techs, tech[2].second]
+        l_curve = l[tech[2].second]
+        r_env[j + 1] = compute_R(maximum(real_eigvals(A_curve)))
+        println(max_R)
+        for (i, r) in enumerate(grid_R)
+            w = compute_w(A_curve, B_curve, d, l_curve, r)
+            curves_env[i, j + 1] = r <= r_env[j + 1] ? w : 0.0
+        end
+    end
+    p = plot()
+    labels="tech " .* string.(axes(curves_env, 2))
+    for i in axes(curves_env, 2)
+        grid = 1:findlast(x -> x <= r_env[i], grid_R)
+        plot!(grid_R[grid], curves_env[grid, i], name=labels[i], xlabel="r", ylabel="w", lw = 3)
+    end
+    # p = plot!(grid_R, curves_env, label="country " .* string.(axes(curves_countries, 2)), color = :gray, lw = 2)
+    vline!([tech[1].first for tech in techs], label=nothing, color=:black)
+    return p
+end

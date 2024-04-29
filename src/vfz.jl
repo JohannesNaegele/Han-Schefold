@@ -2,6 +2,7 @@ using IterTools: product
 global precision_r_diff = 1e-6
 
 # TODO: ensure that the techs have all the same length
+# TODO: use B properly if not identity
 struct Envelope{T, R}
     A
     B
@@ -63,7 +64,7 @@ function try_piecewise_switches(envelope, r, d, C_inv)
             new_col = (country_tech - 1) * n_goods + sector_tech
             process_new = view(envelope.A, :, new_col)
             l[sector_tech] = envelope.l[new_col]
-            w = compute_w(C_inv=C_inv, d=envelope.d, l=l, process_old=process_old, process=process_new, sector_tech, r)
+            w, _ = compute_w(C_inv=C_inv, d=envelope.d, l=l, process_old=process_old, process=process_new, industry=sector_tech, r=r)
             w > w_max && w_max = w
         end
         l[sector_tech] = old_l[sector_tech] # reset
@@ -73,19 +74,21 @@ function try_piecewise_switches(envelope, r, d, C_inv)
     return w_max != w_old
 end
 
-function try_start_tech(envelope, C_inv, start_r, end_r)
+function try_start_tech(envelope, start_r, end_r)
     tech = envelope.ids[envelope.tech_dict[start_r]]
+    C_inv = envelope.B - (1 + end_r) * envelope.A[:, tech]
     w_old = envelope.wages[end_r]
     process_old = view(envelope.A, :, envelope.ids[old_tech_id][sector_tech])
     new_col = (country_tech - 1) * n_goods + sector_tech
     process_new = view(envelope.A, :, new_col)
     l[sector_tech] = envelope.l[new_col]
-    w = compute_w(C_inv=C_inv, d=envelope.d, l=l, process_old=process_old, process=process_new, sector_tech, end_r - start_r)
+    # It should be ok to update the inverse with the Woodbury formula since the new process is usually quite different
+    w, C_inv_new = compute_w(C_inv=C_inv, d=envelope.d, l=l, process_old=process_old, process=process_new, industry=sector_tech, r=end_r - start_r)
     update_envelope(envelope, r, new_tech, w_max)
-    return w_max != w_old, C_inv
+    return w_max != w_old, C_inv_new
 end
 
-function binary_search(envelope, C_inv, start_r, end_r, start_terminated=false)
+function binary_search(envelope, start_r, end_r, start_terminated=false)
     if end_r - start_r < precision_r_diff
         # TODO:
         # check for numerical instability
@@ -93,23 +96,28 @@ function binary_search(envelope, C_inv, start_r, end_r, start_terminated=false)
         # First, we try to improve the current tech at start_r (if not already optimal)
         # If tech transfer works:
         #   If piecewise improvement in end_r is possible: Reverse roles.
-        #   If not: Check all values between start_r and end_r (if necessary search in smaller interval again)
+        #   If not: Check all values between start_r and end_r (if necessary, search in smaller interval again)
         # If it doesn't work: split in lower and upper half of the profit rates and try again
-        start_terminated = start_terminated || try_piecewise_switches(envelope, start_r, d, C_inv)
-        transfer_worked, C_inv = try_start_tech(envelope, C_inv, start_r, end_r)
+        tech = envelope.ids[envelope.tech_dict[start_r]]
+        if !start_terminated
+            C_inv = inv(B[:, tech] - (1+r) * A[:, tech])
+            start_terminated = try_piecewise_switches(envelope, start_r, d, C_inv)
+        end
+        # Try to use newly found tech and update the inverse
+        transfer_worked, C_inv_new = try_start_tech(envelope, start_r, end_r)
         if transfer_worked
-            end_terminated = try_piecewise_switches(envelope, end_r, d, C_inv)
+            end_terminated = try_piecewise_switches(envelope, end_r, d, C_inv_new)
             all_terminated = end_terminated
             # If we are done at this profit rate: Check transfer to next profit rates and if they are done as well
             if end_terminated
                 next_r = r_end + envelope.stepsize
-                for interval_r in next_r:envelope.stepsize:r_start
-                    transfer_worked, C_inv = try_start_tech(envelope, C_inv, start_r, end_r)
-                    also_terminated = try_piecewise_switches(envelope, interval_r, d, C_inv)
+                for interval_r in next_r:flipsign(envelope.stepsize, next_r - r_start):r_start
+                    transfer_worked, C_inv_interv = try_start_tech(envelope, end_r, interval_r)
+                    also_terminated = try_piecewise_switches(envelope, interval_r, d, C_inv_interv)
                     # If we are not done: search in this smaller interval again
                     if !also_terminated
-                        start_r = end_r
-                        end_r = interval_r
+                        start_r = interval_r
+                        end_r = start_r
                         all_terminated = false
                         break
                     end
@@ -117,7 +125,7 @@ function binary_search(envelope, C_inv, start_r, end_r, start_terminated=false)
             end
             all_terminated && return
             # Maybe here extend if end_r is highest, but this is tricky
-            binary_search(envelope, C_inv, end_r, start_r)
+            binary_search(envelope, C_inv_new, end_r, start_r)
         else
             # Maybe rationals/fixed point arithmetic would be better
             # Split the interval in half
@@ -125,9 +133,9 @@ function binary_search(envelope, C_inv, start_r, end_r, start_terminated=false)
             r = grid[div(length(grid), 2)]
 
             # Try the lower half (without new pairwise search in start_r if we are already optimal)
-            binary_search(envelope, C_inv, start_r, r, start_terminated)
+            binary_search(envelope, start_r, r, start_terminated)
             # Try the upper half
-            binary_search(envelope, C_inv, end_r, r + envelope.stepsize)
+            binary_search(envelope, end_r, r + envelope.stepsize)
         end
     end
 end
@@ -160,6 +168,7 @@ function compute_vfz(; A, B, l, d, R, step, verbose = false, save_all=true)
     # Number of goods
     n_goods = size(A, 1)
     profit_rates = 0.0:step:R
+    # Initialize with technology of first country
     init_tech = A[:, 1:n_goods]
 
     envelope = Envelope(
@@ -171,9 +180,7 @@ function compute_vfz(; A, B, l, d, R, step, verbose = false, save_all=true)
         initial_tech=init_tech
     )
 
-    start_C_inv = inv(B - A)
-
-    binary_search(envelope, start_C_inv, 0.0, R)
+    binary_search(envelope, 0.0, R)
     # Extend the maximal profit rate
     # compute_R(maximum.(real_eigvals.([A1, A2])))
     # Test whether the Woodbury formula is stable; do this only at begin/start of tech choice

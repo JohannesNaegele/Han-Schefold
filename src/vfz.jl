@@ -1,4 +1,3 @@
-using IterTools: product
 global precision_r_diff = 1e-6
 
 # TODO: ensure that the techs have all the same length
@@ -22,11 +21,10 @@ struct Envelope{T, R}
         d,
         size(A, 1),
         div(size(A, 2), n_goods),
-        product(1:n_countries, 1:n_goods)
         Dict(1 => initial_tech),
         Dict(profit_rates .=> 1),
-        Dict(1 => Set(profit_rates))
-        Dict(profit_rates .=> -Inf)
+        Dict(1 => Set(profit_rates)),
+        Dict(profit_rates .=> -Inf),
         stepsize
     )
 end
@@ -65,7 +63,7 @@ function try_piecewise_switches(envelope, r, d, C_inv)
             process_new = view(envelope.A, :, new_col)
             l[sector_tech] = envelope.l[new_col]
             w, _ = compute_w(C_inv=C_inv, d=envelope.d, l=l, process_old=process_old, process=process_new, industry=sector_tech, r=r)
-            w > w_max && w_max = w
+            w > w_max && (w_max = w)
         end
         l[sector_tech] = old_l[sector_tech] # reset
     end

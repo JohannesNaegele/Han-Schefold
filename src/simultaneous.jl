@@ -1,5 +1,5 @@
 """ Compute the envelope for all countries at once. """
-function simultaneous_comparisons(ids; step = 0.01, verbose = false)
+function simultaneous_comparisons(ids; step = 0.01, verbose = false, effects_sectors = 33)
 
     # Read in data
     data = preprocess_data.(ids)
@@ -33,10 +33,11 @@ function simultaneous_comparisons(ids; step = 0.01, verbose = false)
         model_intensities = model_x,
         model_intensities_trunc = model_x_trunc,
         model_prices = model_p,
-        verbose = verbose
+        verbose = verbose,
+        effects_sectors = effects_sectors
     )
     n_switches = length(switches["technology"])
-    labeled_tech = Matrix{String}(undef, 33, n_switches + 1)
+    labeled_tech = Matrix{String}(undef, effects_sectors, n_switches + 1)
     for i in eachindex(switches["technology"])
         country_index = div.(switches["technology"][i][1].second .- 1, n_goods) .+ 1
         labeled_tech[:, i] = map(j -> ids[j], country_index)
@@ -44,10 +45,15 @@ function simultaneous_comparisons(ids; step = 0.01, verbose = false)
     country_index = div.(switches["technology"][n_switches][2].second .- 1, n_goods) .+ 1
     labeled_tech[:, n_switches + 1] = map(j -> ids[j], country_index)
     return Dict(
+        "A" => A,
+        "B" => B,
+        "l" => l,
+        "d" => d,
         "intensities" => df_q,
         "names" => profit_rates_to_names,
         "profit_rates" => profit_rates,
         "switches" => switches,
-        "labeled_technology" => labeled_tech
+        "labeled_technology" => labeled_tech,
+        "max_R" => 0.0
     )
 end

@@ -2,9 +2,11 @@
 
 Bear in mind that the columns of A describe the technology of one sector.
 Therefore all objects have permuted dimensions compared to the usual ``(1 + r)Ap + wl = p`` formula!!
+
+We use all 36 sectors but consider only 33 for effects. See Han/Schefold 2006 p. 751, footnote 2
 """
 function compute_envelope(; A, B, l, d, R, step, model_intensities,
-        model_intensities_trunc, model_prices, verbose = false, save_all=true)
+        model_intensities_trunc, model_prices, verbose = false, save_all=true, effects_sectors=33)
 
     # Number of goods
     n_goods = size(A, 1)
@@ -14,14 +16,12 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
     precision = Int(ceil(log10(1 / step)))
     # Grid of profit rates
     profit_rates = 0:step:round(R, digits = precision)
-
-    # We use all 36 sectors but consider only 33 for effects. See Han/Schefold 2006 p. 751, footnote 2
     # Activity levels (q)
     intensities = zeros(size(A, 2), length(profit_rates))
     # Truncated activity levels; calculated via C = (B - A)
     intensities_trunc = zeros(size(A, 1), length(profit_rates))
-    pA = zeros(33, length(profit_rates))
-    right_side_factor = zeros(33, length(profit_rates))
+    pA = zeros(effects_sectors, length(profit_rates))
+    right_side_factor = zeros(effects_sectors, length(profit_rates))
     lx = zeros(length(profit_rates))
     # Prices computed from truncated intensities via the dual representation
     prices = zeros(n_goods, length(profit_rates))
@@ -80,7 +80,7 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
     # We compute the truncated stuff and prices only at switch points
     for (i, tech) in enumerate(eachcol(chosen_technology)[begin:(end - 1)])
         # Check whether we are at switch point
-        switch = tech[1:33] != chosen_technology[1:33, i + 1]
+        switch = tech[1:effects_sectors] != chosen_technology[1:effects_sectors, i + 1]
         if switch
             for j in i:(i + 1)
                 # Compute truncated intensities
@@ -107,19 +107,19 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
                 prices[:, j] = value.(model_prices[:p])
 
                 # Compute (l * x)
-                lx[j] = l_trunc[:, 1:33] * intensities_trunc[:, j][1:33]
+                lx[j] = l_trunc[:, 1:effects_sectors] * intensities_trunc[:, j][1:effects_sectors]
                 # Compute (pA)'
-                pA[:, j] = vec(A_trunc[1:33, 1:33]' * prices[:, i][1:33])
+                pA[:, j] = vec(A_trunc[1:effects_sectors, 1:effects_sectors]' * prices[:, i][1:effects_sectors])
                 # Compute A * x / (l * x)
-                right_side_factor[:, j] = A_trunc[1:33, 1:33] *
-                                          intensities_trunc[:, j][1:33] / lx[j]
+                right_side_factor[:, j] = A_trunc[1:effects_sectors, 1:effects_sectors] *
+                                          intensities_trunc[:, j][1:effects_sectors] / lx[j]
             end
 
             # Compute p * A * x / (l * x)
             push!(capital_intensities,
                 [
-                    profit_rates[i] => prices[:, i][1:33]' * right_side_factor[:, i],
-                    profit_rates[i + 1] => prices[:, i][1:33]' * right_side_factor[:, i + 1]
+                    profit_rates[i] => prices[:, i][1:effects_sectors]' * right_side_factor[:, i],
+                    profit_rates[i + 1] => prices[:, i][1:effects_sectors]' * right_side_factor[:, i + 1]
                 ]
             )
             push!(lx_at_switch, [
@@ -129,27 +129,27 @@ function compute_envelope(; A, B, l, d, R, step, model_intensities,
             )
             push!(pA_at_switch,
                 [
-                    profit_rates[i] => pA[:, i][1:33],
-                    profit_rates[i + 1] => pA[:, i + 1][1:33]
+                    profit_rates[i] => pA[:, i][1:effects_sectors],
+                    profit_rates[i + 1] => pA[:, i + 1][1:effects_sectors]
                 ]
             )
             push!(l_at_switch,
                 [
-                    profit_rates[i] => vec(view(l, :, chosen_technology[:, i]))[1:33],
-                    profit_rates[i + 1] => vec(view(l, :, chosen_technology[:, i + 1]))[1:33]
+                    profit_rates[i] => vec(view(l, :, chosen_technology[:, i]))[1:effects_sectors],
+                    profit_rates[i + 1] => vec(view(l, :, chosen_technology[:, i + 1]))[1:effects_sectors]
                 ]
             )
             push!(intensities_at_switch,
                 [
-                    profit_rates[i] => intensities_trunc[:, i][1:33],
-                    profit_rates[i + 1] => intensities_trunc[:, i + 1][1:33]
+                    profit_rates[i] => intensities_trunc[:, i][1:effects_sectors],
+                    profit_rates[i + 1] => intensities_trunc[:, i + 1][1:effects_sectors]
                 ]
             )
-            push!(prices_switch, profit_rates[i] => prices[:, i][1:33]
+            push!(prices_switch, profit_rates[i] => prices[:, i][1:effects_sectors]
             )
             push!(technologies_switch,
-                [profit_rates[i] => chosen_technology[:, i][1:33]
-                 profit_rates[i + 1] => chosen_technology[:, i + 1][1:33]]
+                [profit_rates[i] => chosen_technology[:, i][1:effects_sectors]
+                 profit_rates[i + 1] => chosen_technology[:, i + 1][1:effects_sectors]]
             )
         end
     end

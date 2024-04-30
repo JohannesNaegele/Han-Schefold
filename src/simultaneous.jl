@@ -1,5 +1,5 @@
 """ Compute the envelope for all countries at once. """
-function simultaneous_comparisons(ids; step = 0.01, verbose = false, effects_sectors = 33)
+function simultaneous_comparisons(ids; stepsize = 0.01, verbose = false, effects_sectors = 1:33)
 
     # Read in data
     data = preprocess_data.(ids)
@@ -29,7 +29,7 @@ function simultaneous_comparisons(ids; step = 0.01, verbose = false, effects_sec
         l = l,
         d = d,
         R = R,
-        step = step,
+        stepsize = stepsize,
         model_intensities = model_x,
         model_intensities_trunc = model_x_trunc,
         model_prices = model_p,
@@ -37,11 +37,12 @@ function simultaneous_comparisons(ids; step = 0.01, verbose = false, effects_sec
         effects_sectors = effects_sectors
     )
     n_switches = length(switches["technology"])
-    labeled_tech = Matrix{String}(undef, effects_sectors, n_switches + 1)
+    labeled_tech = Matrix{String}(undef, length(effects_sectors), n_switches + 1)
     for i in eachindex(switches["technology"])
         country_index = div.(switches["technology"][i][1].second .- 1, n_goods) .+ 1
         labeled_tech[:, i] = map(j -> ids[j], country_index)
     end
+    # FIXME: n_switches could be zero
     country_index = div.(switches["technology"][n_switches][2].second .- 1, n_goods) .+ 1
     labeled_tech[:, n_switches + 1] = map(j -> ids[j], country_index)
     return Dict(

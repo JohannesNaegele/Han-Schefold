@@ -1,5 +1,5 @@
 """ Compute the pairwise envelope and associated numerical results. """
-function pairwise_comparisons(ids; step = 0.01, save_all = true, n_goods = 36)
+function pairwise_comparisons(ids; stepsize = 0.01, save_all = true, n_goods = 36)
 
     # Dict for results
     results = Dict(
@@ -52,7 +52,7 @@ function pairwise_comparisons(ids; step = 0.01, save_all = true, n_goods = 36)
                 l = l,
                 d = d,
                 R = R,
-                step = step,
+                stepsize = stepsize,
                 model_intensities = model_x,
                 model_intensities_trunc = model_x_trunc,
                 model_prices = model_p,

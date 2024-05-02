@@ -1,5 +1,5 @@
 """ Compute the pairwise envelope and associated numerical results. """
-function pairwise_comparisons(ids; stepsize = 0.01, save_all = true, n_goods = 36)
+function pairwise_comparisons(ids; stepsize = 0.01, save_all = true, n_goods = 36, extend=true)
 
     # Dict for results
     results = Dict(
@@ -56,7 +56,8 @@ function pairwise_comparisons(ids; stepsize = 0.01, save_all = true, n_goods = 3
                 model_intensities = model_x,
                 model_intensities_trunc = model_x_trunc,
                 model_prices = model_p,
-                save_all = save_all
+                save_all = save_all,
+                extend = extend
             )
             n_countries = div(size(A, 2), n_goods)
             insertcols!(df_q, 1, "Sector" => repeat(sectors, n_countries))
